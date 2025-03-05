@@ -1,0 +1,94 @@
+ Debugging file (1/2/3): debug.dbg 1
+Log prepared!
+Pseudo Harddata parameters loaded...
+Blocks parameters loaded...
+ Output file: C:/Users/roberto.miele/OneDrive - Universidade de Lisboa/6. SPADE///Inversions results/output_Norne_WellFalse_CapsFalse_AvgTrue_onlywell//dss/ip_real
+ Realizations (#): 1
+ Bias Correction: number of simulations = 10
+ Correction for mean = 1
+ Correction for variance = 1
+ Not simulated nodes: -9999.99
+Miscelaneous parameters loaded...
+ Max. previous simulated nodes: 12
+ (0)two-part search/(1)data nodes flag: 1
+ Number of samples per octant: 0
+ Seed: 46344
+Parameters loaded...
+ XX: nodes, min., spacing: 128 1 1
+ YY: nodes, min., spacing: 1 1 1
+ ZZ: nodes, min., spacing: 128 1 1
+Grid Parameters loaded...
+ Zones file: C:/Users/roberto.miele/OneDrive - Universidade de Lisboa/6. SPADE///Inversions results/output_Norne_WellFalse_CapsFalse_AvgTrue_onlywell//dss/Facies_model_21.out
+ Using Bihistogram? (0)No /(1)Yes: 0
+Bihistogram Parameters loaded...
+ Nst, C0: 1 0.2
+Loading VARIOGRAMZ1S1
+Variogram model: 2
+Covariance proportion: 1
+Angle one: 0
+Angle two: 0
+Angle three: 0
+Amplitude one: 30
+Amplitude two: 1
+Amplitude three: 24
+ Using Bihistogram? (0)No /(1)Yes: 0
+Bihistogram Parameters loaded...
+ Nst, C0: 1 0
+Loading VARIOGRAMZ2S1
+Variogram model: 2
+Covariance proportion: 1
+Angle one: 0
+Angle two: 0
+Angle three: 0
+Amplitude one: 30
+Amplitude two: 1
+Amplitude three: 30
+ Reading zones datafile 
+zone data loaded
+zone data loaded
+ Kriging type (0)SK (1)OK (2)SK local means (3)KED (4)ColK-Gcc (5)ColK-Lcc (6)LVM-ColK-Gcc (7)LVM-ColK-Lcc: 5
+ Secondary data (grid): C:/Users/roberto.miele/OneDrive - Universidade de Lisboa/6. SPADE///Inversions results/output_Norne_WellFalse_CapsFalse_AvgTrue_onlywell/aux_ip.out
+ Local correlation coeficients: C:/Users/roberto.miele/OneDrive - Universidade de Lisboa/6. SPADE///Inversions results/output_Norne_WellFalse_CapsFalse_AvgTrue_onlywell/aux_simil.out
+ Reading secondary datafile 
+000001418C192DE0 failed to open!   acceptable data  = 0
+  weighted average  = -4.31812e-35
+ weighted variance  = 5.09059e-66
+
+ Reading local correlation coeficients 
+000001418C192DB0 failed to open!   acceptable data  = 0
+  weighted average  = -4.32312e-35
+ weighted variance  = 5.10259e-66
+
+ BUILDING COVARIANCE TABLE 
+ Covariance Look up table and search for previously
+ simulated grid nodes.  The maximum range in each
+ coordinate direction for covariance look up is:
+     X direction: 63
+     Y direction: 0
+     Z direction: 63
+ Node values are not searched beyond this distance! 
+
+ BUILDING COVARIANCE TABLE 
+ Covariance Look up table and search for previously
+ simulated grid nodes.  The maximum range in each
+ coordinate direction for covariance look up is:
+     X direction: 63
+     Y direction: 0
+     Z direction: 63
+ Node values are not searched beyond this distance! 
+
+ BEGIN SIMULATION
+ Working on realization number 1 
+Preparing simulation
+ Samples outside area: 200
+
+ Samples outside area: 272
+
+Simulating
+ .progress. 0% 
+-------------------------------------------------------------------------------
+ Simulation Elapsed time: 0 seconds              
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+ Elapsed time: 0 seconds               Press any key to continue...   
+-------------------------------------------------------------------------------

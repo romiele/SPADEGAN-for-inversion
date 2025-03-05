@@ -16,7 +16,7 @@ class ForwardModeling(nn.Module):
         self.type_of_FM= args.type_of_FM
         self.syn_seismic= torch.zeros((args.nz, args.nx)).to(self.device)
         self.wavelets= None
-        self.minlayer = 10
+        self.minlayer = 12
         self.maxlayer = 20
         print (f'Layers: {self.minlayer} - {self.maxlayer} ')
     def load_wavelet(self,args):
@@ -116,7 +116,7 @@ class ForwardModeling(nn.Module):
         
         for _ in range(N):  
             layers = []
-            while(sum(layers) < r.shape[-2]-int((self.maxlayer+self.minlayer)/2)):
+            while(sum(layers) <= r.shape[-2]-int((self.maxlayer+self.minlayer)/2)):
                 layers.append(np.random.randint(self.minlayer, self.maxlayer + 1))
             
             if(sum(layers) != r.shape[-2]): 
@@ -143,19 +143,18 @@ class ForwardModeling(nn.Module):
                 real_sq = r[:,0,layers[i]:layers[i+1]]
                 syn_sq = s[:,0,layers[i]:layers[i+1]]
             
-                if args.type_of_corr=='Similarity':        
-                    num= torch.abs(torch.subtract(real_sq,syn_sq))
-                    den= torch.add(torch.abs(real_sq), torch.abs(syn_sq))
-                    simil = 1-torch.sum((num/den), dim=1)/num.shape[1]
-                    self.misfit[:,0,layers[i]:layers[i+1]]+= simil[:,None,:]
+                num= torch.abs(torch.subtract(real_sq,syn_sq))
+                den= torch.add(torch.abs(real_sq), torch.abs(syn_sq))
+                simil = 1-torch.sum((num/den), dim=1)/num.shape[1]
+                self.misfit[:,0,layers[i]:layers[i+1]]+= simil[:,None,:]
                         
                         
-                elif args.type_of_corr == 'Quasi-corr':
-                    num= (2*torch.sum(torch.multiply(real_sq, syn_sq),dim=-2))
-                    den= torch.sum(real_sq**2,dim=-2)+ torch.sum(syn_sq**2, dim=-2)
-                    simil = (num/den)
-                    # simil[simil<0]=0
-                    self.misfit[:,0,layers[i]:layers[i+1]]+= simil[:,None,:]
+                # elif args.type_of_corr == 'Quasi-corr':
+                #     num= (2*torch.sum(torch.multiply(real_sq, syn_sq),dim=-2))
+                #     den= torch.sum(real_sq**2,dim=-2)+ torch.sum(syn_sq**2, dim=-2)
+                #     simil = (num/den)
+                #     # simil[simil<0]=0
+                #     self.misfit[:,0,layers[i]:layers[i+1]]+= simil[:,None,:]
 
         self.misfit = self.misfit/N
 
@@ -174,24 +173,24 @@ class ForwardModeling(nn.Module):
         self.misfit= torch.zeros_like(s).to(self.device)
         if r.shape[0]!=s.shape[0]: r= torch.tile(r, (s.shape[0],1,))
         
-        if args.type_of_corr=='Similarity':        
-            num= torch.abs(torch.subtract(r,s))
-            den= torch.add(torch.abs(r), torch.abs(s))
-            simil = torch.sum(1-(num/den), dim=-1)/num.shape[-1]
+        # if args.type_of_corr=='Similarity':        
+        num= torch.abs(torch.subtract(r,s))
+        den= torch.add(torch.abs(r), torch.abs(s))
+        simil = torch.sum(1-(num/den), dim=-1)/num.shape[-1]
             
-        if args.type_of_corr=='pearson':
-            simil = torch.zeros(r.shape[0])
-            for i in range(r.shape[0]): simil[i] = np.corrcoef(r[i],s[i])[0,1]
+        # if args.type_of_corr=='pearson':
+        #     simil = torch.zeros(r.shape[0])
+        #     for i in range(r.shape[0]): simil[i] = np.corrcoef(r[i],s[i])[0,1]
             
-        if args.type_of_corr=='Normalized_SSE':        
-            num= torch.abs(torch.subtract(r,s)**2)
-            den= torch.add(torch.abs(r), torch.abs(s))**2
-            simil = torch.sum(1-(num/den), dim=-1)/num.shape[-1]
+        # if args.type_of_corr=='Normalized_SSE':        
+        #     num= torch.abs(torch.subtract(r,s)**2)
+        #     den= torch.add(torch.abs(r), torch.abs(s))**2
+        #     simil = torch.sum(1-(num/den), dim=-1)/num.shape[-1]
             
-        elif args.type_of_corr == 'Quasi-corr':
-            num= 2*torch.sum(r*s,dim=-1) #axis?
-            den= torch.sum(r**2,dim=-1)+ torch.sum(s**2, dim=-1)
-            simil = (num/den)
+        # elif args.type_of_corr == 'Quasi-corr':
+        #     num= 2*torch.sum(r*s,dim=-1) #axis?
+        #     den= torch.sum(r**2,dim=-1)+ torch.sum(s**2, dim=-1)
+        #     simil = (num/den)
 
         self.glob_misfit= simil
         
@@ -237,7 +236,7 @@ class ElasticModels():
         
             
     def det_Ip(self, facies_model):
-        facies_model= (facies_model+1)*0.5
+        if (facies_model<0).any(): facies_model= (facies_model+1)*0.5
         #ip= torch.zeros_like(facies_model)
 
         #ip[facies_model<0.5]=self.ipmax

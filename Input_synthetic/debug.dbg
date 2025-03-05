@@ -1,0 +1,47 @@
+ Debugging file (1/2/3): debug.dbg 1
+Log prepared!
+Pseudo Harddata parameters loaded...
+Blocks parameters loaded...
+ Output file: C:/Users/romie/OneDrive - Universit√
+ Realizations (#): 1
+ Bias Correction: number of simulations = 10
+ Correction for mean = 1
+ Correction for variance = 1
+ Not simulated nodes: -9999.99
+Miscelaneous parameters loaded...
+ Max. previous simulated nodes: 12
+ (0)two-part search/(1)data nodes flag: 1
+ Number of samples per octant: 0
+ Seed: 85292
+Parameters loaded...
+ XX: nodes, min., spacing: 64 1 1
+ YY: nodes, min., spacing: 1 1 1
+ ZZ: nodes, min., spacing: 64 1 1
+Grid Parameters loaded...
+ Zones file: C:/Users/romie/OneDrive - Universit√
+ Using Bihistogram? (0)No /(1)Yes: 0
+Bihistogram Parameters loaded...
+ Nst, C0: 1 0
+Loading VARIOGRAMZ1S1
+Variogram model: 1
+Covariance proportion: 1
+Angle one: 0
+Angle two: 0
+Angle three: 0
+Amplitude one: 30
+Amplitude two: 1
+Amplitude three: 10
+ Using Bihistogram? (0)No /(1)Yes: 0
+Bihistogram Parameters loaded...
+ Nst, C0: 1 0
+Loading VARIOGRAMZ2S1
+Variogram model: 1
+Covariance proportion: 1
+Angle one: 0
+Angle two: 0
+Angle three: 0
+Amplitude one: 40
+Amplitude two: 1
+Amplitude three: 40
+ Reading zones datafile 
+00000197FF304240 failed to open!
