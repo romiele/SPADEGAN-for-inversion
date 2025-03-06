@@ -17,26 +17,29 @@ import numpy as np
 from scipy.stats import gaussian_kde
 
 
-for typ in ['det','DSS']:
-    for modello in range(5):
+for typ in ['DSS']:
+    for modello in [3,4,5]:
         parser = argparse.ArgumentParser()
         
-        parser.add_argument("--project_path", type=str, default='C:/Users/romie/OneDrive - Universidade de Lisboa/PhD/SAPDE_code/')
+        parser.add_argument("--project_path", type=str, default='C:/Users/rmiele/Work/Inversion/SPADEGAN/')
         parser.add_argument("--in_folder",type=str, default="/Input_synthetic")
         parser.add_argument("--seismic_data", type=str, default=f'/Real_seismic_{typ}{modello}.out')
+        parser.add_argument("--outdir", type=str, default=f'C:/Users/rmiele/OneDrive - Université de Lausanne/Codes/Inversion/SPADEGAN/Save/')
+        
         parser.add_argument("--nx",type=int, default=64)
         parser.add_argument("--ny",type=int, default=1)
         parser.add_argument("--nz",type=int, default=64)
         parser.add_argument("--wavelet_file", type=str, default='/wavelet_near_235ms_statistical.asc')
         parser.add_argument("--W_weight",type=int, default=1)
         parser.add_argument("--type_of_FM",type=str, default='fullstack')
-        parser.add_argument("--n_it", type=int, default=51)
-        parser.add_argument("--n_sim_f", type=int, default=100)
+        parser.add_argument("--n_it", type=int, default=101)
+        parser.add_argument("--n_sim_f", type=int, default=150)
         parser.add_argument("--n_sim_ip", type=int, default= 1)
         parser.add_argument("--type_of_corr", type=str, default='Similarity', help='pearson / Similarity / Quasi-corr')
         parser.add_argument("--avg_cond", type=bool, default=False, help='Frankenstein is smoothed with 2x2 kernel')
         parser.add_argument("--device",type=str, default='cpu')
-        parser.add_argument("--saved_state", type=str, default='/SPADE_Synthetic_trained.pth') #SPADE_Synthetic_trained.pth
+        parser.add_argument("--saved_state", type=str, 
+                            default='C:/Users/rmiele/OneDrive - Université de Lausanne/Codes/Modeling/SPADEGAN/Save/retrain_synthetic/500_old.pth') #SPADE_Synthetic_trained.pth
         parser.add_argument("--null_val", default=-9999.00,type=float, help='null value in well data')
         parser.add_argument("--var_N_str", default=[1,1],type=int, help='number of variogram structures per facies [fac0, fac1,...]')
         parser.add_argument("--var_nugget", default=[0,0],type=float, help='variogram nugget per facies [fac0, fac1,...]')
@@ -46,19 +49,17 @@ for typ in ['det','DSS']:
         parser.add_argument("--N_layers", default= 30, type=int)
         args= parser.parse_args()
         
-        args.outdir = args.seismic_data[:-4]
-        if not os.path.isdir(args.project_path+args.outdir):
-            os.mkdir(args.project_path+args.outdir)
-            os.mkdir(args.project_path+args.outdir+'/dss')
+        args.outdir += args.seismic_data[:-4]
+        os.makedirs(args.outdir+'/dss', exist_ok=True)
         
-        with open(args.project_path+args.outdir+'/args.txt', 'w') as f:
+        with open(args.outdir+'/args.txt', 'w') as f:
             json.dump(args.__dict__, f, indent=2)
         
         # Start
         print("Starting inversion")
         stime= time.time()
         
-        state = torch.load(args.project_path+args.saved_state, map_location=args.device)
+        state = torch.load(args.saved_state, map_location=args.device)
         
         netG = generators.Res_Generator(256,img_ch=1,n_classes = 1
                                         ,base_ch = 64, leak = 0,att = True
@@ -122,7 +123,7 @@ for typ in ['det','DSS']:
                 args.nx, 1, args.nz, args.project_path+args.in_folder)
             Gslib().Gslib_write(f'/Real_Ip0_1', ['Ip'], 
                                 rip.detach().cpu().numpy().flatten(), 
-                                args.nx, 1, args.nz, args.project_path+args.outdir)
+                                args.nx, 1, args.nz, args.outdir)
         
             rip = Ip.simulations = torch.Tensor(Gslib().Gslib_read(
                 args.project_path+args.in_folder+'/Real_Ip'+args.seismic_data[-5:-4]+'_1.out'
@@ -152,18 +153,18 @@ for typ in ['det','DSS']:
         plt.figure()
         plt.imshow(rip.squeeze(),cmap='jet')
         plt.colorbar()
-        plt.savefig(args.project_path+args.outdir+'/real_ip.png')
+        plt.savefig(args.outdir+'/real_ip.png')
         plt.close()
         
         plt.figure()
         plt.imshow(Seis.real_seismic.detach().cpu().squeeze(),cmap='seismic')
         plt.colorbar(label='Real seismic')
-        plt.savefig(args.project_path+args.outdir+'/dobs.png')
+        plt.savefig(args.outdir+'/dobs.png')
         plt.close()
         
         plt.figure()
         plt.imshow(rf.squeeze(),cmap='hot')
-        plt.savefig(args.project_path+args.outdir+'/real_Fac.png')
+        plt.savefig(args.outdir+'/real_Fac.png')
         plt.close()
         
         #start: each cell of 8x8 has a uniform distribution
@@ -186,12 +187,12 @@ for typ in ['det','DSS']:
         plt.figure()
         plt.imshow(torch.mean(prior,dim=0).squeeze().detach(),vmin=-1,vmax=1,cmap='hot')
         plt.colorbar()
-        plt.savefig(args.project_path+args.outdir+'/prior.png')
+        plt.savefig(args.outdir+'/prior.png')
         plt.close()
         del prior
         
         log= torch.zeros(args.n_it,2)
-        flog= open(args.project_path+args.outdir+'/log.txt','w')
+        flog= open(args.outdir+'/log.txt','w')
         flog.write(f"Glob similarity (mean), Glob similarity (std dev) [num of samples={args.n_sim_f}\n")
         
         maxglob = 0
@@ -200,7 +201,7 @@ for typ in ['det','DSS']:
             z= torch.randn(args.n_sim_f, 256).to(args.device)
             
             facies= netG(z,cond).detach()
-            facies = (facies+1)/2
+            facies = torch.round((facies+1)/2)
             
             if 'DSS' in args.seismic_data: 
                 Ip.run_dss(facies, i, args)
@@ -226,7 +227,9 @@ for typ in ['det','DSS']:
                     facies_max[j,k]=facies[where_max[j,k],0,j,k]
             
             #accept or reject that distribution based on local likelihood
-            # like_max = like_max*(((i+1)*.4)/(args.n_it*.4))
+            rate = min(i / (args.n_it//5), 1)
+            
+            like_max = like_max*rate
             
             cond_p = cond.clone()
             cond_r = torch.zeros_like(cond_p)
@@ -272,16 +275,16 @@ for typ in ['det','DSS']:
             if  torch.mean(Seis.glob_misfit)>maxglob: 
                 maxglob = torch.mean(Seis.glob_misfit).item()
         
-                Gslib().Gslib_write('Facies_patchwork_best',['facies'], best_facies_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-                Gslib().Gslib_write('Similarity_patchwork_best',['similarity'], best_rho_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-                Gslib().Gslib_write('Facies_probability_best',['probability'], cond[0,0].detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-                Gslib().Gslib_write('aux_simil_best',['simil'], best_rho_it.squeeze().detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-                Gslib().Gslib_write('aux_ip_best',['Ip'], best_ip_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
+                Gslib().Gslib_write('Facies_patchwork_best',['facies'], best_facies_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+                Gslib().Gslib_write('Similarity_patchwork_best',['similarity'], best_rho_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+                Gslib().Gslib_write('Facies_probability_best',['probability'], cond[0,0].detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+                Gslib().Gslib_write('aux_simil_best',['simil'], best_rho_it.squeeze().detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+                Gslib().Gslib_write('aux_ip_best',['Ip'], best_ip_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
         
             del facies, Ip.simulations
             
-            Gslib().Gslib_write('aux_simil',['simil'], best_rho_it.squeeze().detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-            Gslib().Gslib_write('aux_ip',['Ip'], best_ip_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
+            Gslib().Gslib_write('aux_simil',['simil'], best_rho_it.squeeze().detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+            Gslib().Gslib_write('aux_ip',['Ip'], best_ip_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
         
             curglob = torch.mean(Seis.glob_misfit)
             stdglob = torch.std(Seis.glob_misfit)
@@ -296,45 +299,45 @@ for typ in ['det','DSS']:
                 plt.figure()
                 plt.imshow(meanit,vmin=0,vmax=1, cmap='hot')
                 plt.colorbar(label='Probability of sands')
-                plt.savefig(args.project_path+args.outdir+f'/probs_it_{i+1}.png')
+                plt.savefig(args.outdir+f'/probs_it_{i+1}.png')
                 plt.close()
                 
                 plt.figure()
                 plt.imshow(cond.detach().cpu().mean(0).squeeze(),vmin=0,vmax=1, cmap='jet')
                 plt.colorbar(label='Conditioning probability (Sands)')
-                plt.savefig(args.project_path+args.outdir+f'/Conditioning_{i+1}.png')
+                plt.savefig(args.outdir+f'/Conditioning_{i+1}.png')
                 plt.close()
                 
                 plt.figure()
                 plt.errorbar(torch.arange(i+1).numpy(),log[:i+1,0].numpy(),yerr=log[:i+1,1].numpy(), color ='k')
                 plt.legend('Correlation coefficient')
                 plt.ylim([-0.1,1])
-                plt.savefig(args.project_path+args.outdir+'/log.png')
+                plt.savefig(args.outdir+'/log.png')
                 plt.close()
                 
                 plt.figure()
                 plt.imshow(best_ip_it.detach().cpu().squeeze(),
                            cmap='jet', vmin=Ip.ipmin,vmax=Ip.ipmax)
                 plt.colorbar(label= r'Conditioning $I_P$ values')
-                plt.savefig(args.project_path+args.outdir+f'/it{i+1}_aux_ip.png')
+                plt.savefig(args.outdir+f'/it{i+1}_aux_ip.png')
                 plt.close()
                 
                 plt.figure()
                 plt.imshow(best_rho_it.detach().cpu().squeeze(),cmap='hsv',vmin=0,vmax=1)
                 plt.colorbar(label= r'Highest similarity coefficients')
-                plt.savefig(args.project_path+args.outdir+f'/it{i+1}_aux_simil.png')
+                plt.savefig(args.outdir+f'/it{i+1}_aux_simil.png')
                 plt.close()
                 
                 plt.figure()
                 plt.imshow(best_facies_it.detach().cpu().squeeze(),cmap='jet',vmin=0,vmax=1)
                 plt.colorbar(label= r'Aux facies')
-                plt.savefig(args.project_path+args.outdir+f'/it{i+1}_aux_fac.png')
+                plt.savefig(args.outdir+f'/it{i+1}_aux_fac.png')
                 plt.close()
                 
                 plt.figure()
                 plt.imshow(Seis.syn_seismic.mean(0).squeeze(), cmap='seismic')
                 plt.colorbar(label='Average synthetic seismic')
-                plt.savefig(args.project_path+args.outdir+f'/syn_seis{i+1}.png')
+                plt.savefig(args.outdir+f'/syn_seis{i+1}.png')
                 plt.close()
                 del meanit
             

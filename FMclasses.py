@@ -16,7 +16,7 @@ class ForwardModeling(nn.Module):
         self.type_of_FM= args.type_of_FM
         self.syn_seismic= torch.zeros((args.nz, args.nx)).to(self.device)
         self.wavelets= None
-        self.minlayer = 12
+        self.minlayer = 10
         self.maxlayer = 20
         print (f'Layers: {self.minlayer} - {self.maxlayer} ')
     def load_wavelet(self,args):
@@ -206,7 +206,7 @@ class ElasticModels():
             args.type_of_FM = ''
             
         self.inf= f'{args.project_path}/{args.in_folder}/'
-        self.ouf= f'{args.project_path}/{args.outdir}/'
+        self.ouf= f'{args.outdir}/'
         self.nx= args.nx
         self.nz= args.nz
         self.var_N_str= args.var_N_str if 'var_N_str' in args else 0
@@ -301,8 +301,8 @@ class ElasticModels():
             self.krig_type= 0
         else:
             self.krig_type= 5
-            self.sec_var_file=f'{args.project_path}/{args.outdir}/aux_ip.out'
-            self.local_corr_file=f'{args.project_path}/{args.outdir}/aux_simil.out'    
+            self.sec_var_file=f'{self.ouf}/aux_ip.out'
+            self.local_corr_file=f'{self.ouf}/aux_simil.out'    
 
         
         for s_f in range(facies_mod.shape[0]):

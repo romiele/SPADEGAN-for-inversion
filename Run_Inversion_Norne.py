@@ -15,12 +15,12 @@ import time
 import json
 import numpy as np
 
-for condwell in [True,False]:
+for condwell in [False]:
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--project_path", type=str, default='C:/Users/rmiele/OneDrive - Universidade de Lisboa/PhD/SPADE_code/')
+    parser.add_argument("--project_path", type=str, default='C:/Users/rmiele/Work/Inversion/SPADEGAN/')
     parser.add_argument("--in_folder",type=str, default='/Input_Norne')
-    parser.add_argument("--outdir",type=str, default=f'/output_Norne_Well{condwell}')
+    parser.add_argument("--outdir", type=str, default=f'C:/Users/rmiele/OneDrive - Université de Lausanne/Codes/Inversion/SPADEGAN/Save/')
     
     parser.add_argument("--nx",type=int, default=128)
     parser.add_argument("--ny",type=int, default=1)
@@ -33,13 +33,14 @@ for condwell in [True,False]:
     parser.add_argument("--wavelet_file", type=str, default='/wavelet_near.asc') #wavelet_near_235ms *10000*0.85
     parser.add_argument("--W_weight",type=int, default=1)
     
-    parser.add_argument("--n_it", type=int, default=30)
+    parser.add_argument("--n_it", type=int, default=101)
     parser.add_argument("--n_sim_f", type=int, default=150)
     parser.add_argument("--n_sim_ip", type=int, default= 1)
     
     parser.add_argument("--device",type=str, default='cpu')
-    parser.add_argument("--saved_state", type=str, default='/trained_state/Norne_model_200_ema.pth')
-    parser.add_argument("--zdim", type=int, default=256, help='dimensionality of the latent')
+    parser.add_argument("--saved_state", type=str, 
+                        default='C:/Users/rmiele/OneDrive - Université de Lausanne/Codes/Modeling/SPADEGAN/Save/retrain_norne_512/200_180.pth')
+    parser.add_argument("--zdim", type=int, default=512, help='dimensionality of the latent')
     parser.add_argument("--ch", type=int, default=32, help='base channel of model')
     
     parser.add_argument("--null_val", default=-9999.00,type=float, help='null value in well data')
@@ -55,9 +56,11 @@ for condwell in [True,False]:
     
     setattr(args, 'seedlist', np.random.randint(0,args.n_sim_f*10000,args.n_sim_f).astype(int).tolist())
     
-    os.makedirs(args.project_path+args.outdir+'/dss', exist_ok=True)
+    args.outdir += f'output_Norne_Well{condwell}'
 
-    with open(args.project_path+args.outdir+'/args.txt', 'w') as f:
+    os.makedirs(args.outdir+'/dss', exist_ok=True)
+
+    with open(args.outdir+'/args.txt', 'w') as f:
         json.dump(args.__dict__, f, indent=2)
         
     # Start
@@ -65,7 +68,7 @@ for condwell in [True,False]:
     stime= time.time()
     
     #load generator and trained parameters
-    state = torch.load(args.project_path+args.saved_state, map_location=args.device)
+    state = torch.load(args.saved_state, map_location=args.device)
     netG = generators_norne.Res_Generator(args.zdim, img_ch=1, n_classes = 1,
                                           base_ch = args.ch, leak = 0, att = True,
                                           SN = True, cond_method = 'conv1x1').to(args.device)
@@ -115,7 +118,7 @@ for condwell in [True,False]:
              Seis.calc_synthetic(torch.tensor(wells.Ip.values[None,None,:,None])).squeeze()*-1,
              label='Convolution (Ip log)')
     plt.legend()
-    plt.savefig(args.project_path+args.outdir+'/seisfit_well.png')            
+    plt.savefig(args.outdir+'/seisfit_well.png')            
     plt.close()
     
     Gslib().Gslib_write('seismic_section', ['Amplitudes'], 
@@ -157,20 +160,20 @@ for condwell in [True,False]:
         axs.plot(wells.i_index+wells.Ip*0.007-50,wells.k_index, zorder=2, 
                  c='darkgreen', linewidth=2, label='Ip well')
         axs.legend()
-        plt.savefig(args.project_path+args.outdir+'/dobswell.png')
+        plt.savefig(args.outdir+'/dobswell.png')
         plt.close()
     
     plt.figure()
     plt.hist(Ip0.Ip.values, color='black', alpha=0.7, label='Shale')
     plt.hist(Ip1.Ip.values, color='orange', alpha=0.7, label='Sands')
     plt.legend()
-    plt.savefig(args.project_path+args.outdir+'/Iphist.png')
+    plt.savefig(args.outdir+'/Iphist.png')
     plt.close()
     
     plt.figure()
     plt.imshow(Seis.real_seismic.detach().cpu().squeeze(),cmap='seismic')
     plt.colorbar()
-    plt.savefig(args.project_path+args.outdir+'/dobs.png')
+    plt.savefig(args.outdir+'/dobs.png')
     plt.close()
     
     #prior conditioning data
@@ -188,11 +191,11 @@ for condwell in [True,False]:
     plt.figure()
     plt.imshow(cond[0].squeeze().detach(),vmin=0,vmax=1,cmap='hot')
     plt.colorbar(label='Conditioning probability of shales')
-    plt.savefig(args.project_path+args.outdir+'/probs_prior.png')
+    plt.savefig(args.outdir+'/probs_prior.png')
     plt.close()
     
     log= torch.zeros(args.n_it,2)
-    flog= open(args.project_path+args.outdir+'/log.txt','w')
+    flog= open(args.outdir+'/log.txt','w')
     flog.write(f"Glob similarity (mean), Glob similarity (std dev) [num of samples={args.n_sim_f}\n")
     maxglob = 0
     
@@ -225,6 +228,10 @@ for condwell in [True,False]:
                 facies_max[j,k]=facies[where_max[j,k],0,j,k]
         
         #accept or reject that distribution based on local likelihood
+        rate = min(i / (args.n_it//5), 1)
+        
+        like_max = like_max*rate
+
         
         cond_p = cond.clone()
         cond_r = torch.zeros_like(cond_p)
@@ -252,18 +259,18 @@ for condwell in [True,False]:
             best_facies_it[wells.k_index.values-1,wells.i_index.values[0]-1] = torch.Tensor(wells.Facies.values)
             best_rho_it[wells.k_index.values-1,wells.i_index.values[0]-1] = 1
             best_ip_it[wells.k_index.values-1,wells.i_index.values[0]-1] = torch.Tensor(wells.Ip.values)
-            Gslib().Gslib_write('aux_simil',['simil'], best_rho_it.squeeze().detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-            Gslib().Gslib_write('aux_ip',['Ip'], best_ip_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
+        Gslib().Gslib_write('aux_simil',['simil'], best_rho_it.squeeze().detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+        Gslib().Gslib_write('aux_ip',['Ip'], best_ip_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
         
         Seis.check_seis_global_distance(args)
         if  torch.mean(Seis.glob_misfit)>maxglob: 
             maxglob = torch.mean(Seis.glob_misfit).item()
     
-            Gslib().Gslib_write('Facies_patchwork_best',['facies'], best_facies_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-            Gslib().Gslib_write('Similarity_patchwork_best',['similarity'], best_rho_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-            Gslib().Gslib_write('Facies_probability_best',['probability'], cond[0,0].detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-            Gslib().Gslib_write('aux_simil_best',['simil'], best_rho_it.squeeze().detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
-            Gslib().Gslib_write('aux_ip_best',['Ip'], best_ip_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.project_path+args.outdir)
+            Gslib().Gslib_write('Facies_patchwork_best',['facies'], best_facies_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+            Gslib().Gslib_write('Similarity_patchwork_best',['similarity'], best_rho_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+            Gslib().Gslib_write('Facies_probability_best',['probability'], cond[0,0].detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+            Gslib().Gslib_write('aux_simil_best',['simil'], best_rho_it.squeeze().detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
+            Gslib().Gslib_write('aux_ip_best',['Ip'], best_ip_it.detach().cpu().numpy().flatten(), args.nx, 1, args.nz, args.outdir)
     
         del facies, Ip.simulations
         
@@ -274,26 +281,26 @@ for condwell in [True,False]:
         flog.write(f"{','.join(log[i].numpy().astype(str))}\n")
         
         if (i)%10==0:
-            ff = (netG(torch.randn(args.n_sim_f, 256).to(args.device), cond)+1).detach().cpu()*0.5
+            ff = (netG(torch.randn(args.n_sim_f//2, args.zdim).to(args.device), cond[:args.n_sim_f//2])+1).detach().cpu()*0.5
             meanit= torch.mean(ff,dim=0).squeeze().numpy()
             
             plt.figure()
             plt.imshow(meanit,vmin=0,vmax=1, cmap='hot')
             plt.colorbar(label='Probability of sands')
-            plt.savefig(args.project_path+args.outdir+f'/probs_it_{i+1}.png')
+            plt.savefig(args.outdir+f'/probs_it_{i+1}.png')
             plt.close()
             
             plt.figure()
             plt.imshow(cond.detach().cpu().mean(0).squeeze(),vmin=0,vmax=1, cmap='jet')
             plt.colorbar(label='Conditioning probability (Sands)')
-            plt.savefig(args.project_path+args.outdir+f'/Conditioning_{i+1}.png')
+            plt.savefig(args.outdir+f'/Conditioning_{i+1}.png')
             plt.close()
             
             plt.figure()
             plt.errorbar(torch.arange(i+1).numpy(),log[:i+1,0].numpy(),yerr=log[:i+1,1].numpy(), color ='k')
             plt.legend('Correlation coefficient')
             plt.ylim([-0.1,1])
-            plt.savefig(args.project_path+args.outdir+'/log.png')
+            plt.savefig(args.outdir+'/log.png')
             plt.close()
             
             if args.condwell: 
@@ -301,25 +308,25 @@ for condwell in [True,False]:
                 plt.imshow(best_ip_it.detach().cpu().squeeze(),
                            cmap='jet', vmin=Ip.ipmin,vmax=Ip.ipmax)
                 plt.colorbar(label= r'Conditioning $I_P$ values')
-                plt.savefig(args.project_path+args.outdir+f'/it{i+1}_aux_ip.png')
+                plt.savefig(args.outdir+f'/it{i+1}_aux_ip.png')
                 plt.close()
             
             plt.figure()
             plt.imshow(best_rho_it.detach().cpu().squeeze(),cmap='hsv',vmin=0,vmax=1)
             plt.colorbar(label= r'Highest similarity coefficients')
-            plt.savefig(args.project_path+args.outdir+f'/it{i+1}_aux_simil.png')
+            plt.savefig(args.outdir+f'/it{i+1}_aux_simil.png')
             plt.close()
             
             plt.figure()
             plt.imshow(best_facies_it.detach().cpu().squeeze(),cmap='jet',vmin=0,vmax=1)
             plt.colorbar(label= r'Aux facies')
-            plt.savefig(args.project_path+args.outdir+f'/it{i+1}_aux_fac.png')
+            plt.savefig(args.outdir+f'/it{i+1}_aux_fac.png')
             plt.close()
             
             plt.figure()
             plt.imshow(Seis.syn_seismic.mean(0).squeeze(), cmap='seismic')
             plt.colorbar(label='Average synthetic seismic')
-            plt.savefig(args.project_path+args.outdir+f'/syn_seis{i+1}.png')
+            plt.savefig(args.outdir+f'/syn_seis{i+1}.png')
             plt.close()
             del meanit
         
